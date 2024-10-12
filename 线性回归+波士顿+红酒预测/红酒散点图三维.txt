@@ -1,0 +1,39 @@
+from sklearn.datasets import load_wine
+import numpy as np
+wine = load_wine()
+x = wine.data
+y = wine.target
+
+from sklearn.model_selection import train_test_split
+x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=8)
+
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler().fit(x_train)
+x_train_scaled = scaler.transform(x_train)
+x_test_scaled = scaler.transform(x_test)
+
+from sklearn.decomposition import PCA
+pca = PCA(n_components=3)
+pca.fit(x_train_scaled)
+x_train_pca = pca.transform(x_train_scaled)
+x_test_pca = pca.transform(x_test_scaled)
+
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+fig = plt.figure(figsize=(10, 8))
+ax = fig.add_subplot(111, projection='3d')
+
+colors = ['red', 'green', 'blue']
+
+for i, color, name in zip(np.unique(y), colors, wine.target_names):
+    ax.scatter(x_train_pca[y_train == i, 0], x_train_pca[y_train == i, 1], x_train_pca[y_train == i, 2],
+               c=color, marker='o', edgecolors='k', label=name + '训练集')
+    ax.scatter(x_test_pca[y_test == i, 0], x_test_pca[y_test == i, 1], x_test_pca[y_test == i, 2],
+               c=color, marker='*', edgecolors='k', label=name + '测试集')
+
+ax.set_xlabel('成分1')
+ax.set_ylabel('成分2')
+ax.set_zlabel('成分3')
+plt.legend(loc='best')
+plt.show()
