@@ -1,0 +1,18 @@
+import network
+import socket
+import time
+wlan=network.WLAN(network.STA_IF)
+wlan.active(True)
+wlan.connect('S1531','1234567890')
+network_config=wlan.ifconfig()
+if network_config[0]!='0.0.0.0':
+    print('IP',network_config[0])
+    client_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    server_address=('192.168.1.22',9988)
+    client_socket.connect(server_address)
+    send_data='飞起来'
+    client_socket.sendall(send_data.encode('utf-8'))
+    response=client_socket.recv(1024)
+    print('已收到消息:',response.decode('utf-8'))
+    client_socket.close()
+    

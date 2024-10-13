@@ -1,0 +1,13 @@
+import socket
+sever_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+print('主机名', socket.gethostname())
+sever_socket.bind(('192.168.1.22', 9988))
+sever_socket.listen(5)
+while True:
+    client_socket, client_address = sever_socket.accept()
+    print('客户端地址', client_address)
+    msg = client_socket.recv(1024)
+    if msg:
+        print('收到消息', msg.decode('utf-8'))
+    client_socket.send('已收到信息'.encode('utf-8'))
+    client_socket.close()

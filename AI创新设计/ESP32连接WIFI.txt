@@ -1,0 +1,17 @@
+import network
+import time
+wlan=network.WLAN(network.STA_IF)
+wlan.active(True)
+list_wifi=wlan.scan()
+for i in list_wifi:
+    print(i[0])
+wifi_name=input('输入wifi名称')
+wifi_password=input('输入密码')
+wlan.connect(wifi_name,wifi_password)
+while not wlan.isconnected():
+    print('连接中')
+    time.sleep(2)
+print('是否连接成功',wlan.isconnected())
+mac_address=wlan.config('mac')
+network_config=wlan.ifconfig()
+print('Mac',mac_address,network_config)
