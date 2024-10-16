@@ -1,0 +1,41 @@
+import socket
+
+serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+host = socket.gethostname()
+
+port = 9988
+
+# 绑定端口号
+serversocket.bind((host, port))
+
+serversocket.listen(5)
+
+print(f"服务器正在监听 {host}:{port}...")
+
+try:
+    while True:
+        clientsocket, addr = serversocket.accept()
+        print("连接地址: %s" % str(addr))
+
+        while True:
+            # 接收数据
+            data = clientsocket.recv(1024)
+            if not data:
+                break
+            message = data.decode('utf-8')
+            print('收到消息：', message)
+
+            # 发送数据
+            response = input("请输入回复消息: ")
+            clientsocket.send(response.encode('utf-8'))
+
+except KeyboardInterrupt:
+    print("服务器关闭")
+
+except Exception as e:
+    print(f"发生错误：{e}")
+
+finally:
+    clientsocket.close()
+    serversocket.close()

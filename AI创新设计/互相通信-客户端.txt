@@ -1,0 +1,47 @@
+import socket
+import network
+
+# 连接到WiFi网络
+wifi_ssid = 'S1531'
+wifi_password = '1234567890'
+
+station = network.WLAN(network.STA_IF)
+station.active(True)
+station.connect(wifi_ssid, wifi_password)
+
+# 等待连接成功
+while not station.isconnected():
+    pass
+
+print('连接成功')
+print(station.ifconfig())
+
+# 创建 socket 对象
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# 获取PC的IP地址和端口号
+host = '192.168.1.'  # 将此替换为您的PC的IP地址
+port = 9988
+
+# 尝试连接到服务器
+try:
+    client_socket.connect((host, port))
+    print('已连接到服务器')
+
+    while True:
+        # 发送数据
+        message = input("请输入消息: ").encode('utf-8')  # 使用UTF-8编码
+        client_socket.send(message)
+
+        # 接收数据
+        data = client_socket.recv(1024)
+        if not data:
+            break
+        print('从服务器接收到：', data.decode('utf-8'))
+
+except OSError as e:
+    print('连接失败:', e)
+
+finally:
+    client_socket.close()
+
