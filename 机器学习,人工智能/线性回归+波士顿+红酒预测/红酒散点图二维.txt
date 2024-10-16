@@ -1,0 +1,52 @@
+from sklearn.datasets import load_wine
+import numpy as np
+
+# 加载数据集
+wine = load_wine()
+x = wine.data
+y = wine.target
+print("wine数据的维度为：", x.shape)
+print("wine数据的类型签为:", np.unique(y))
+
+# 划分训练集和测试集
+from sklearn.model_selection import train_test_split
+x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=8)
+print("训练集数据维度:", x_train.shape)
+print("训练集标签维度:", y_train.shape)
+print("测试集数据维度:", x_test.shape)
+print("测试集标签维度:", y_test.shape)
+
+# 数据标准化
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler().fit(x_train)
+x_train_scaled = scaler.transform(x_train)
+x_test_scaled = scaler.transform(x_test)
+print('标准化前训练集数据的最小值和最大值：{0}, {1}'.format(x_train.min(), x_train.max()))
+print('标准化后训练集数据的最小值和最大值：{0:.2f}, {1:.2f}'.format(x_train_scaled.min(), x_train_scaled.max()))
+print('标准化前测试集数据的最小值和最大值：{0}, {1}'.format(x_test.min(), x_test.max()))
+print('标准化后测试集数据的最小值和最大值：{0:.2f}, {1:.2f}'.format(x_test_scaled.min(), x_test_scaled.max()))
+
+from sklearn.decomposition import PCA
+pca = PCA(n_components=2)
+pca.fit(x_train_scaled)
+x_train_pca = pca.transform(x_train_scaled)
+x_test_pca = pca.transform(x_test_scaled)
+print('PCA降维后训练集数据维度：', x_train_pca.shape)
+print('PCA降维后测试集数据维度：', x_test_pca.shape)
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+plt.rcParams['font.sans-serif'] = ['SimHei']
+plt.rcParams['axes.unicode_minus'] = False
+
+plt.figure(figsize=(8,6))
+
+for i, color, name in zip(np.unique(y), ['red', 'green', 'blue'], wine.target_names):
+    plt.scatter(x_train_pca[y_train == i, 0], x_train_pca[y_train == i, 1], c=color, marker='o', edgecolors='k', label=name + '训练集')
+    plt.scatter(x_test_pca[y_test == i, 0], x_test_pca[y_test == i, 1], c=color, marker='*', edgecolors='k', label=name + '测试集')
+
+plt.xlabel('成分1')
+plt.ylabel('成分2')
+plt.legend(loc='best')
+plt.show()
