@@ -1,0 +1,58 @@
+#记得改动WIFI和密码，还有WiFi的IP（成功后烧录进ESP32，只用服务端进行测试）
+import socket
+import network
+from machine import Pin
+
+# 初始化LED
+led = Pin(15, Pin.OUT)
+
+# 连接到WiFi网络
+wifi_ssid = 'S1531'
+wifi_password = '1234567890'
+
+station = network.WLAN(network.STA_IF)
+station.active(True)
+station.connect(wifi_ssid, wifi_password)
+
+# 等待连接成功
+while not station.isconnected():
+    pass
+
+print('连接成功')
+print(station.ifconfig())
+
+# 创建 socket 对象
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# 获取PC的IP地址和端口号
+host = '192.168.1.x'  # 将此替换为您的PC的IP地址
+port = 9988
+
+# 尝试连接到服务器
+try:
+    client_socket.connect((host, port))
+    print('已连接到服务器')
+
+    while True:
+        # 接收数据
+        data = client_socket.recv(1024)
+        if not data:
+            print('服务器断开连接')
+            break
+        command = data.decode('utf-8')
+        print('从服务器接收到：', command)
+
+        # 根据指令控制LED
+        if command == '1':
+            led.value(1)
+            print('LED点亮')
+        elif command == '0':
+            led.value(0)
+            print('LED熄灭')
+
+except OSError as e:
+    print('连接失败:', e)
+finally:
+    client_socket.close()
+    print('Socket 已关闭')
+
