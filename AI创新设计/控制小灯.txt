@@ -1,0 +1,8 @@
+from machine import Pin  
+led=Pin(15,Pin.OUT)  
+while True:  
+    a=input("输入1亮，0灭:")  
+    if a=='1':  
+        led.value(1)  
+    elif a=='0':  
+        led.value(0)

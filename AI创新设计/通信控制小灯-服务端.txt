@@ -1,0 +1,34 @@
+import socket
+
+# 设置服务器端的IP地址和端口号
+host = '192.168.201.62'  # 将此替换为您的PC的IP地址
+port = 9988
+
+# 创建 socket 对象
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# 绑定端口号
+server_socket.bind((host, port))
+
+# 开始监听
+server_socket.listen(5)
+print('服务器正在监听...')
+
+# 等待客户端连接
+client_socket, addr = server_socket.accept()
+print('连接地址：', addr)
+
+try:
+    while True:
+        # 发送指令
+        command = input("输入1亮，0灭: ")
+        if command in ['1', '0']:
+            client_socket.send(command.encode('utf-8'))
+        else:
+            print("无效的命令，请输入'1'或'0'")
+
+except KeyboardInterrupt:
+    print('服务器关闭')
+finally:
+    client_socket.close()
+    server_socket.close()
