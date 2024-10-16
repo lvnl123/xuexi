@@ -1,4 +1,5 @@
-#记得改动WIFI和密码，还有WiFi的IP（成功后烧录进ESP32，只用服务端进行测试）
+##记得改动WIFI和密码，还有WiFi的IP（成功后烧录进ESP32，只用服务端进行测试）
+
 import socket
 import network
 from machine import Pin
