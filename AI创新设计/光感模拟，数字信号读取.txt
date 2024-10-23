@@ -1,0 +1,10 @@
+from machine import ADC,Pin
+import time
+light_adc=ADC(Pin(35))
+light_dig=Pin(32,Pin.OUT)
+
+while True:
+    ana_val=light_adc.read_u16()
+    dig_val=light_dig.value()
+    print(ana_val,dig_val)
+    time.sleep(1)
