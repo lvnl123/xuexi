@@ -1,0 +1,83 @@
+import socket
+import openpyxl
+from datetime import datetime
+import os
+import time
+
+# 设置最终Excel文件名和临时文件名
+final_excel_filename = 'server_data.xlsx'
+temp_excel_filename = 'server_data_temp.xlsx'
+
+# 在脚本开始时删除原来的server_data.xlsx文件
+if os.path.exists(final_excel_filename):
+    os.remove(final_excel_filename)
+    print(f"已删除旧文件：{final_excel_filename}")
+
+# 创建一个新的Excel工作簿
+wb = openpyxl.Workbook()
+ws = wb.active
+ws.append(['Timestamp', 'Received Data'])  # 添加表头行
+wb.save(temp_excel_filename)  # 保存为临时文件
+
+# 创建 socket 对象
+serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# 获取本地主机名
+host = socket.gethostname()
+
+# 设置端口号
+port = 9988
+
+# 绑定端口号
+serversocket.bind((host, port))
+
+# 设置最大连接数，超过后排队
+serversocket.listen(5)
+
+print(f"服务器启动，正在监听接口 {host}:{port}")
+
+# 等待客户端连接
+clientsocket, addr = serversocket.accept()
+print(f"连接地址：{addr}")
+
+try:
+    while True:
+        # 接收数据
+        data = clientsocket.recv(1024)
+        if not data:
+            break
+        print(f"从 {addr} 接收到数据：{data.decode('utf-8')}")
+
+        # 获取当前时间戳
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        # 打开临时Excel文件准备写入
+        wb = openpyxl.load_workbook(temp_excel_filename)
+        ws = wb.active
+
+        # 写入数据和时间戳到Excel文件
+        ws.append([timestamp, data.decode('utf-8')])
+        wb.save(temp_excel_filename)
+        print(f"数据和时间戳已写入Excel文件：{temp_excel_filename}")
+
+        # 发送确认消息回客户端
+        clientsocket.sendall(b"Data received")
+
+        # 等待1秒
+        time.sleep(1)
+
+except KeyboardInterrupt:
+    print("服务器关闭")
+
+except Exception as e:
+    print(f"发生错误：{e}")
+
+finally:
+    # 将临时文件重命名为最终文件
+    os.rename(temp_excel_filename, final_excel_filename)
+    print(f"临时文件已重命名为最终文件：{final_excel_filename}")
+
+    # 关闭客户端连接
+    clientsocket.close()
+    # 关闭服务器 socket
+    serversocket.close()
