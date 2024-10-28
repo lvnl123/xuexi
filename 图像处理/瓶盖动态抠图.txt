@@ -1,0 +1,83 @@
+import cv2
+import numpy as np
+
+# 定义红色在HSV颜色空间中的范围
+lower_red = np.array([0, 120, 70])
+upper_red = np.array([10, 255, 255])
+lower_red2 = np.array([170, 120, 70])
+upper_red2 = np.array([180, 255, 255])
+
+# 初始化视频捕捉对象
+cap = cv2.VideoCapture('redone.mp4')
+
+# 获取视频的帧率
+fps = cap.get(cv2.CAP_PROP_FPS)
+
+# 初始化视频写入器
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+output_video = cv2.VideoWriter('outputvideo.mp4', fourcc, fps, (int(cap.get(3)), int(cap.get(4))))
+
+frame_count = 0  # 用于计数帧数，以便在保存图片时命名
+
+# 处理视频
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # 转换到HSV颜色空间
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    # 创建掩码以提取红色区域
+    mask1 = cv2.inRange(hsv, lower_red, upper_red)
+    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+    mask = cv2.add(mask1, mask2)
+
+    # 将红色物体与黑色背景合成
+    red_objects = cv2.bitwise_and(frame, frame, mask=mask)
+
+    # 创建黑色背景
+    black_background = np.zeros_like(frame)
+
+    # 将红色物体叠加到黑色背景上
+    final_frame = cv2.add(black_background, red_objects)
+
+    # 写入新视频
+    output_video.write(final_frame)
+
+    # 显示处理后的帧
+    cv2.imshow('Processed Video', final_frame)
+
+    # 检查是否按下's'键来保存当前帧
+    if cv2.waitKey(1) & 0xFF == ord('s'):
+        cv2.imwrite(f'saved_frame_{frame_count}.png', final_frame)
+        print(f"Frame {frame_count} saved as 'saved_frame_{frame_count}.png'")
+
+    frame_count += 1
+
+# 释放视频捕捉对象和视频写入器
+cap.release()
+output_video.release()
+
+# 关闭Processed Video窗口
+cv2.destroyWindow('Processed Video')
+
+# 循环播放输出的视频
+cap = cv2.VideoCapture('outputvideo.mp4')
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # 如果到达视频末尾，重置视频位置
+        continue
+    cv2.imshow('Output Video', frame)
+    if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
+        break
+    # 再次检查是否按下's'键来保存当前帧
+    if cv2.waitKey(1) & 0xFF == ord('s'):
+        cv2.imwrite(f'saved_frame_{frame_count}.png', frame)
+        print(f"Frame {frame_count} saved as 'saved_frame_{frame_count}.png'")
+        frame_count += 1
+
+# 释放视频捕捉对象并关闭所有窗口
+cap.release()
+cv2.destroyAllWindows()
