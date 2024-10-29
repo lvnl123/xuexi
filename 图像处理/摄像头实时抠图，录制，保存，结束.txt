@@ -10,22 +10,19 @@ upper_blue = np.array([130, 255, 255])
 cap = cv2.VideoCapture(0)
 
 if not cap.isOpened():
-    print("Cannot open camera")
+    print("无法打开摄像头")
     exit()
 
 # 获取摄像头分辨率
 frame_width = int(cap.get(3))
 frame_height = int(cap.get(4))
 
-# 设置视频尺寸为摄像头分辨率的一半
-frame_width_half = frame_width // 2
-frame_height_half = frame_height // 2
-
 # 初始化 VideoWriter 对象
 out = None
 recording = False
+blue_object_detection = True  # 新变量，用于控制蓝色物体检测
 
-print("按 'r' 启动/结束录制. 按 's' 保存当前帧. 按 'q' 退出程序.")
+print("按 'r' 开始/结束录制. 按 's' 保存当前帧. 按 'q' 退出程序. 按 'w' 切换蓝色物体检测.")
 
 while cap.isOpened():
     ret, frame = cap.read()
@@ -40,16 +37,16 @@ while cap.isOpened():
         # 将蓝色物体与黑色背景合成
         blue_objects = cv2.bitwise_and(frame, frame, mask=mask)
 
-        # 创建黑色背景
-        black_background = np.zeros_like(frame)
+        # 根据blue_object_detection的值来决定显示蓝色物体检测还是原始摄像头画面
+        if blue_object_detection:
+            display_frame = blue_objects
+        else:
+            display_frame = frame
 
-        # 将蓝色物体叠加到黑色背景上
-        final_frame = cv2.add(black_background, blue_objects)
+        # 在同一个窗口中显示帧
+        cv2.imshow('Camera', display_frame)
 
-        # 显示原始大小的帧
-        cv2.imshow('Blue Object Detection', final_frame)
-
-        # 检查是否按下'r'键开始/停止录制视频
+        # 检查是否按下'r'键开始/结束录制视频
         if cv2.waitKey(1) & 0xFF == ord('r'):
             if not recording:
                 # 获取当前时间戳以创建视频文件名
@@ -57,33 +54,40 @@ while cap.isOpened():
                 video_filename = f'recorded_video_{timestamp}.mp4'
                 # 创建 VideoWriter 对象
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-                out = cv2.VideoWriter(video_filename, fourcc, 20.0, (frame_width_half, frame_height_half))
+                out = cv2.VideoWriter(video_filename, fourcc, 20.0, (frame_width, frame_height))
                 recording = True
-                print(f"Recording started. Video will be saved as '{video_filename}'.")
+                print(f"开始录制，视频将保存为'{video_filename}'.")
             else:
                 # 停止录制并释放 VideoWriter
                 out.release()
                 recording = False
-                print(f"Recording stopped. Video saved as '{video_filename}'.")
+                print(f"录制停止，视频已保存为'{video_filename}'.")
 
         # 如果正在录制，则写入视频文件
         if recording:
-            smaller_frame = cv2.resize(final_frame, (frame_width_half, frame_height_half), interpolation=cv2.INTER_AREA)
-            out.write(smaller_frame)
+            out.write(display_frame)
 
         # 检查是否按下's'键来保存当前帧
         if cv2.waitKey(1) & 0xFF == ord('s'):
             save_timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
             save_filename = f'saved_frame_{save_timestamp}.png'
             try:
-                cv2.imwrite(save_filename, final_frame)
-                print(f"Frame saved as '{save_filename}'")
+                cv2.imwrite(save_filename, display_frame)
+                print(f"帧已保存为'{save_filename}'")
             except Exception as e:
-                print(f"Failed to save frame: {e}")
+                print(f"保存帧失败: {e}")
 
         # 检查是否按下'q'键退出程序
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+
+        # 检查是否按下'w'键切换蓝色物体检测
+        if cv2.waitKey(1) & 0xFF == ord('w'):
+            blue_object_detection = not blue_object_detection
+            if blue_object_detection:
+                print("蓝色物体检测已启用。")
+            else:
+                print("蓝色物体检测已禁用。显示原始摄像头。")
 
 # 如果退出时正在录制，则停止录制并释放 VideoWriter
 if recording:
