@@ -1,0 +1,52 @@
+import socket
+import network
+import machine
+import time
+
+wifi_ssid = 'Xiaomi 14 Pro'
+wifi_password = 'xiaomi14pro'
+
+station = network.WLAN(network.STA_IF)
+station.active(True)
+station.connect(wifi_ssid, wifi_password)
+
+while not station.isconnected():
+    pass
+
+print('连接成功')
+print(station.ifconfig())
+
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_socket.settimeout(10.0)  # 设置超时时间为10秒
+
+host = '192.168.190.62'
+port = 9988
+
+try:
+    client_socket.connect((host, port))
+    print('已连接到服务器')
+
+    adc = machine.ADC(machine.Pin(35))
+
+    while True:
+        try:
+            ana_val = adc.read_u16()
+            message = str(ana_val).encode('utf-8')
+            client_socket.send(message)
+            print('发送光敏传感器的值:', ana_val)
+
+            # 可选：接收服务器的响应
+            response = client_socket.recv(1024)
+            print('服务器响应:', response.decode('utf-8'))
+
+            time.sleep(1)
+        except OSError as e:
+            print('发送数据时发生错误:', e)
+            break  # 如果发生错误，退出循环
+
+except OSError as e:
+    print('连接失败:', e)
+
+finally:
+    client_socket.close()
+

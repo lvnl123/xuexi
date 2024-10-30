@@ -1,0 +1,121 @@
+#光线判断之后存储在Excel和数据集中，文件夹内分类级别
+
+import socket
+import openpyxl
+from datetime import datetime
+import os
+
+# 设置最终Excel文件名和临时文件名
+final_excel_filename = 'server_data.xlsx'
+temp_excel_filename = 'server_data_temp.xlsx'
+
+# 在脚本开始时删除原来的server_data.xlsx文件
+if os.path.exists(final_excel_filename):
+    os.remove(final_excel_filename)
+    print(f"已删除旧文件：{final_excel_filename}")
+
+# 创建一个新的Excel工作簿
+wb = openpyxl.Workbook()
+ws = wb.active
+ws.append(['时间', '数据值', '光线类型'])  # 添加表头行，包括光线类型
+wb.save(temp_excel_filename)  # 保存为临时文件
+
+# 定义光强度分类阈值
+THRESHOLDS = {
+    '强光': 8000,  # 强光阈值
+    '正常光': 30000,  # 正常光阈值
+    '弱光': 45000,    # 弱光阈值
+    '暗光': 60000     # 暗光阈值
+}
+
+# 创建 socket 对象
+serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# 获取本地主机名
+host = socket.gethostname()
+
+# 设置端口号
+port = 9988
+
+# 绑定端口号
+serversocket.bind((host, port))
+
+# 设置最大连接数，超过后排队
+serversocket.listen(5)
+
+print(f"服务器启动，正在监听接口 {host}:{port}")
+
+# 设置数据集类型
+dataset_type = '光敏数据集'
+if not os.path.exists(dataset_type):
+    os.makedirs(dataset_type, exist_ok=True)
+
+try:
+    while True:
+        # 等待客户端连接
+        clientsocket, addr = serversocket.accept()
+        print(f"连接地址：{addr}")
+
+        try:
+            while True:
+                # 接收数据
+                data = clientsocket.recv(1024)
+                if not data:
+                    break
+                data_value = int(data.decode('utf-8'))  # 假设接收到的数据是整数
+
+                # 根据光强度分类存储数据
+                if data_value < THRESHOLDS['强光']:
+                    light_type = '强光'
+                elif data_value < THRESHOLDS['正常光']:
+                    light_type = '正常光'
+                elif data_value < THRESHOLDS['弱光']:
+                    light_type = '弱光'
+                else:
+                    light_type = '暗光'
+
+                print(f"从 {addr} 接收到数据：{data_value}, 光线类型：{light_type}")
+
+                # 获取当前时间戳
+                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                # 打开临时Excel文件准备写入
+                wb = openpyxl.load_workbook(temp_excel_filename)
+                ws = wb.active
+
+                # 写入数据和时间戳到Excel文件，包括光线类型
+                ws.append([timestamp, data_value, light_type])
+                wb.save(temp_excel_filename)
+                print(f"数据和时间戳已写入Excel文件：{temp_excel_filename}")
+
+                # 创建或追加数据到对应的光线类型文本文件
+                light_data_file_path = f'{dataset_type}/{light_type}.txt'
+                if not os.path.exists(dataset_type):
+                    os.makedirs(dataset_type, exist_ok=True)
+                with open(light_data_file_path, 'a') as light_data_file:
+                    light_data_file.write(f"{timestamp}, {data_value}\n")
+                    print(f"数据已追加到文件：{light_data_file_path}")
+
+                # 发送确认消息回客户端
+                clientsocket.sendall(b"Data received")
+
+        except Exception as e:
+            print(f"发生错误：{e}")
+
+        finally:
+            # 关闭客户端连接
+            clientsocket.close()
+
+except KeyboardInterrupt:
+    print("服务器关闭")
+
+except Exception as e:
+    print(f"发生错误：{e}")
+
+finally:
+    # 将临时文件重命名为最终文件
+    os.rename(temp_excel_filename, final_excel_filename)
+    print(f"临时文件已重命名为最终文件：{final_excel_filename}")
+
+    # 关闭服务器 socket
+    serversocket.close()
