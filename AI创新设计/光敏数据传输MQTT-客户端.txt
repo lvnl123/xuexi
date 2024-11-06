@@ -1,0 +1,100 @@
+import network
+import machine
+import time
+from umqtt.simple import MQTTClient
+
+wifi_ssid = 'Xiaomi 14 Pro'
+wifi_password = 'xiaomi14pro'
+
+# 创建一个网络连接
+station = network.WLAN(network.STA_IF)
+station.active(True)
+station.connect(wifi_ssid, wifi_password)
+
+# 等待连接成功，添加超时处理
+timeout = 10  # 超时时间（秒）
+start_time = time.time()
+while not station.isconnected():
+    if time.time() - start_time > timeout:
+        print('Wi-Fi连接超时')
+        break
+    time.sleep(1)
+
+if station.isconnected():
+    print('Wi-Fi连接成功')
+    print(station.ifconfig())
+else:
+    print('Wi-Fi连接失败，程序退出')
+    raise SystemExit(1)  # 如果Wi-Fi连接失败，则退出程序
+
+# MQTT服务器设置
+mqtt_server = '192.168.190.62'  # MQTT服务器的IP地址
+client_id = 'lightpy'  # 客户端ID，确保每个客户端是唯一的
+topic_light = 'base/light'  # 发布的主题
+
+# 创建MQTT客户端实例
+client = MQTTClient(client_id, mqtt_server)
+
+# 定义一个函数，用于连接到MQTT服务器
+def connectMQTT():
+    while True:
+        try:
+            client.connect()
+            print('已连接到MQTT服务器')
+            return
+        except OSError as e:
+            print(f"连接尝试失败: {e}")
+            time.sleep(5)  # 等待5秒后重试
+
+# 连接到MQTT服务器
+connectMQTT()
+
+# 初始化ADC和数字传感器
+adc = machine.ADC(machine.Pin(35))  # 初始化ADC
+light_dig = machine.Pin(32, machine.Pin.IN)  # 初始化数字传感器
+
+# 定义一个函数，用于检查网络状态并重新连接
+def check_wifi_and_mqtt():
+    if not station.isconnected():
+        print('Wi-Fi连接丢失，正在尝试重新连接...')
+        station.connect(wifi_ssid, wifi_password)
+        # 等待Wi-Fi重新连接
+        while not station.isconnected():
+            time.sleep(1)
+        print('Wi-Fi重新连接成功')
+
+    # 尝试重新连接MQTT服务器
+    try:
+        client.connect()
+        print('MQTT服务器重新连接成功')
+    except OSError as e:
+        print(f"MQTT服务器连接失败: {e}")
+
+# 数据的循环发送
+connected = True
+try:
+    while connected:
+        try:
+            # 定期检查网络状态和MQTT连接
+            check_wifi_and_mqtt()
+
+            ana_val = adc.read_u16()  # 读取模拟传感器的值
+            dig_val = light_dig.value()  # 读取数字传感器的值
+            
+            print('采集到的光感数据：', ana_val, dig_val)
+            message = f'{ana_val},{dig_val}'  # 将读取的值组合成字符串
+            
+            # 发送消息到MQTT服务器
+            client.publish(topic_light, message)
+            print('发布光敏传感器的值:', ana_val)
+
+            time.sleep(1)  # 等待一秒
+        except OSError as e:
+            print('发送数据时发生错误:', e)
+            connected = False
+except KeyboardInterrupt:
+    print('程序被用户中断')
+finally:
+    client.disconnect()
+    print('已断开与MQTT服务器的连接')
+

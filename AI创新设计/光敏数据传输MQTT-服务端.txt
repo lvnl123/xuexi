@@ -1,0 +1,34 @@
+import paho.mqtt.client as mqtt
+
+broker_address = "192.168.190.62"
+port = 1883  # MQTT代理的端口
+
+client_id = 'lightpy'
+
+# 当在MQTT客户端成功连接到MQTT代理时被调用的回调函数
+def on_connect(client, userdata, flags, reason_code, properties=None):
+    print(f"Connected with result code {reason_code}")
+    client.subscribe("base/light")
+
+# 在MQTT客户端接收到来自MQTT代理的消息时被调用的回调函数
+def on_message(client, userdata, msg):
+    payload_str = msg.payload.decode('utf-8')
+    try:
+        light_adc, light_dig = payload_str.split(',')
+        print(f'接收到的消息: "{payload_str}"', f'主题: "{msg.topic}"')
+        print(f'光敏模拟值: {light_adc}', f'光敏数字值: {light_dig}')
+    except ValueError as e:
+        print(f"Error parsing message: {e}")
+
+# 创建MQTT客户端实例
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+
+# 为客户端设置回调函数
+client.on_connect = on_connect
+client.on_message = on_message
+
+# 连接到MQTT代理
+client.connect(broker_address, port=port)
+
+# 开始网络循环，处理接收到的消息和重连
+client.loop_forever()
