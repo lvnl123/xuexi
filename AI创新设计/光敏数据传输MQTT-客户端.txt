@@ -1,3 +1,5 @@
+##打开本地网页查看：http://localhost:3000/
+
 import network
 import machine
 import time
