@@ -1,0 +1,101 @@
+import network
+import machine
+import time
+from umqtt.simple import MQTTClient
+from machine import Pin
+import dht
+
+# Wi-Fi设置
+wifi_ssid = 'S1531'
+wifi_password = '1234567890'
+
+# MQTT服务器设置
+mqtt_server = '192.168.1.22'
+client_id = 'wenshidu'
+topic_temp = 'base/temperature'  # 温度主题
+topic_hum = 'base/humidity'      # 湿度主题
+
+# 初始化DHT11对象
+dht11 = dht.DHT11(Pin(2))
+
+# 创建一个网络连接
+station = network.WLAN(network.STA_IF)
+station.active(True)
+station.connect(wifi_ssid, wifi_password)
+
+# 等待连接成功，添加超时处理
+timeout = 10
+start_time = time.time()
+while not station.isconnected():
+    if time.time() - start_time > timeout:
+        print('Wi-Fi连接超时')
+        break
+    time.sleep(1)
+
+if station.isconnected():
+    print('Wi-Fi连接成功')
+    print(station.ifconfig())
+else:
+    print('Wi-Fi连接失败，程序退出')
+    raise SystemExit(1)
+
+# 创建MQTT客户端实例
+client = MQTTClient(client_id, mqtt_server)
+
+# 定义一个函数，用于连接到MQTT服务器
+def connectMQTT():
+    while True:
+        try:
+            client.connect()
+            print('已连接到MQTT服务器')
+            return
+        except OSError as e:
+            print(f"连接尝试失败: {e}")
+            time.sleep(5)
+
+# 连接到MQTT服务器
+connectMQTT()
+
+# 定义一个函数，用于检查网络状态并重新连接
+def check_wifi_and_mqtt():
+    if not station.isconnected():
+        print('Wi-Fi连接丢失，正在尝试重新连接...')
+        station.connect(wifi_ssid, wifi_password)
+        while not station.isconnected():
+            time.sleep(1)
+        print('Wi-Fi重新连接成功')
+
+    try:
+        client.connect()
+        print('MQTT服务器重新连接成功')
+    except OSError as e:
+        print(f"MQTT服务器连接失败: {e}")
+
+# 数据的循环发送
+connected = True
+try:
+    while connected:
+        try:
+            check_wifi_and_mqtt()
+
+            # 读取DHT11温湿度数据
+            dht11.measure()
+            temp = dht11.temperature()
+            hum = dht11.humidity()
+            print('采集到的温度数据：', temp)
+            print('采集到的湿度数据：', hum)
+            
+            # 分别发送温度和湿度数据
+            client.publish(topic_temp, str(temp))
+            client.publish(topic_hum, str(hum))
+
+            time.sleep(1)
+        except OSError as e:
+            print('发送数据时发生错误:', e)
+            connected = False
+except KeyboardInterrupt:
+    print('程序被用户中断')
+finally:
+    client.disconnect()
+    print('已断开与MQTT服务器的连接')
+

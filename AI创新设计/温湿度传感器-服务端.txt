@@ -1,0 +1,47 @@
+import paho.mqtt.client as mqtt
+
+broker_address = "192.168.1.22"
+port = 1883  # MQTT代理的端口
+
+client_id = 'wenshidu'
+
+# 当在MQTT客户端成功连接到MQTT代理时被调用的回调函数
+def on_connect(client, userdata, flags, reason_code, properties=None):
+    print(f"Connected with result code {reason_code}")
+    # 订阅温度和湿度主题
+    client.subscribe("base/temperature")
+    client.subscribe("base/humidity")
+
+# 在MQTT客户端接收到来自MQTT代理的温度消息时被调用的回调函数
+def on_temperature_message(client, userdata, msg):
+    payload_str = msg.payload.decode('utf-8')
+    try:
+        temp = float(payload_str)
+        print(f'接收到的温度消息: "{payload_str}"', f'主题: "{msg.topic}"')
+        print(f'温度: {temp}°C')
+    except ValueError as e:
+        print(f"Error parsing temperature message: {e}")
+
+# 在MQTT客户端接收到来自MQTT代理的湿度消息时被调用的回调函数
+def on_humidity_message(client, userdata, msg):
+    payload_str = msg.payload.decode('utf-8')
+    try:
+        hum = float(payload_str)
+        print(f'接收到的湿度消息: "{payload_str}"', f'主题: "{msg.topic}"')
+        print(f'湿度: {hum}%')
+    except ValueError as e:
+        print(f"Error parsing humidity message: {e}")
+
+# 创建MQTT客户端实例
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+
+# 为客户端设置回调函数
+client.on_connect = on_connect
+client.message_callback_add("base/temperature", on_temperature_message)
+client.message_callback_add("base/humidity", on_humidity_message)
+
+# 连接到MQTT代理
+client.connect(broker_address, port=port)
+
+# 开始网络循环，处理接收到的消息和重连
+client.loop_forever()
