@@ -57,27 +57,27 @@ try:
 
         # 处理每个检测到的人脸
         for (x, y, w, h) in faces:
-            # 绘制矩形框标记人脸
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
             # 截取人脸区域（保留彩色信息）
             face_roi = frame[y:y + h, x:x + w]
+
+            # 将人脸区域转换为灰度图
+            face_roi_gray = cv2.cvtColor(face_roi, cv2.COLOR_BGR2GRAY)
 
             # 生成文件名
             timestamp = int(time.time())
             filename = os.path.join("databet", f"user_{userid}_{sample_num}_{timestamp}.png")
 
-            # 打印调试信息
-            print(f"尝试保存文件到：{filename}")
-
-            # 保存图像
+            # 保存灰度图像（不包含矩形框）
             try:
-                cv2.imwrite(filename, face_roi)
-                print(f"已保存：{filename}")
+                cv2.imwrite(filename, face_roi_gray)
+                print(f"已保存灰度图像：{filename}")
             except Exception as e:
                 print(f"保存文件时出错：{e}")
 
             sample_num += 1
+
+            # 绘制矩形框标记人脸（仅用于显示，不影响保存的图像）
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
         # 显示实时画面（包含矩形框）
         cv2.imshow('Face Capture', frame)
@@ -90,6 +90,7 @@ try:
         if sample_num >= MAX_SAMPLES:
             print(f"已达到最大样本数 ({MAX_SAMPLES})，正在退出...")
             break
+
 finally:
     cap.release()
     cv2.destroyAllWindows()
