@@ -1,0 +1,56 @@
+from machine import Pin, PWM
+import socket
+import time
+import network
+
+# 配置舵机引脚和 PWM
+servo_pin = Pin(4)  # 舵机连接 GPIO4
+servo = PWM(servo_pin, freq=50)
+
+def set_servo_angle(angle):
+    """
+    根据给定的角度设置舵机的位置
+    """
+    duty = int(40 + (angle * 10 / 15))  # 转换角度为占空比
+    servo.duty(duty)
+    time.sleep_ms(500)  # 等待舵机完成动作
+
+def connect_wifi(ssid, password):
+    """
+    连接到 Wi-Fi 网络
+    """
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    if not wlan.isconnected():
+        print("Connecting to Wi-Fi...")
+        wlan.connect(ssid, password)
+        while not wlan.isconnected():
+            pass
+    print("Wi-Fi connected:", wlan.ifconfig())
+
+def connect_to_server(server_ip, server_port):
+    """
+    连接到 Python 服务端
+    """
+    s = socket.socket()
+    s.connect((server_ip, server_port))
+    return s
+
+# 主程序
+connect_wifi("Xiaomi 15 Pro", "xiaomi15pro")  # 替换为你的 Wi-Fi SSID 和密码
+server_socket = connect_to_server("192.168.110.62", 8080)  # 替换为 Python 服务端的 IP 和端口
+
+while True:
+    try:
+        command = server_socket.recv(1024).decode('utf-8').strip()
+        if command == 'OPEN':
+            print("Opening door")
+            set_servo_angle(90)
+        elif command == 'CLOSE':
+            print("Closing door")
+            set_servo_angle(0)
+        else:
+            print("Unknown command:", command)
+    except Exception as e:
+        print("Error:", e)
+        break
